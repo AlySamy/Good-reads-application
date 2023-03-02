@@ -2,51 +2,111 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use App\Models\Posts;
+use App\Models\Post;
+use App\Models\User;
+use App\Http\Requests\StorePostRequest;
 
-class postController extends Controller
+
+class PostController extends Controller
 {
-    function getPosts()
+
+    public function index()
     {
-        $posts=Posts::get();
-        return view('home',[ 'posts' => $posts ]);
+
+        //$allposts = Post::all();
+        $posts = Post::paginate(10);
+
+        return view('posts.index', [
+            'allPosts' => $posts
+        ]);
     }
 
-    function viewPost($id)
+    public function create()
     {
-        $post=Posts::find($id);
-        return view('view',['post'=>$post]);
+        $creators = User::all();
+        return view('posts.create', [
+            'creators' => $creators
+        ]);
     }
 
-    function updatePost($id)
+    public function store()
     {
-        $post = Posts::find($id);
-        return view('update',compact("post"));
+        request()->validate([
+            'title' => "required|unique:posts|min:3",
+            'des' => ['required', 'min:10'],
+            'creator' => 'required|exists:users,id'
+        ]);
+
+
+        $data = request()->post();
+
+        if (request()->hasFile('image')) {
+            $destination_path = 'public/images';
+            $image = request()->file('image');
+            $image_name = $image->getClientOriginalName();
+            $path = request()->file('image')->storeAs($destination_path, $image_name);
+            $data['image'] = $image_name;
+        }
+
+        Post::create([
+            'title' => $data['title'],
+            'description' => $data['des'],
+            'user_id' => $data['creator'],
+            'image' => $data['image']
+        ]);
+
+        return to_route('posts.index'); //redirect to index function
     }
 
-    function editPost($id,Request $request)
+    public function show($id)
     {
-        // dd($request->all());
-        Posts::find($id)->update($request->except(['_method','_token']));
-        return redirect()->route('home');
+        $postShow = Post::find($id);
+
+        // $postShow->comments()->create([
+        //     'body' => 'test this two'
+        // ]);
+        // foreach ($postShow->comments as $comment) {
+        //     dd($comment->body);
+        // }
+
+        //dd($postShow);
+        return view('posts.show', [
+            "postShow" => $postShow
+        ]);
     }
 
-    function deletePost($id)
+    public function edit($id)
     {
-        Posts::find($id)->delete();
-        return redirect()->route('home');
+        $postShow = Post::find($id);
+        $creators = User::all();
+        return view('posts.update', [
+            "postShow" => $postShow,
+            "creators" => $creators
+        ]);
     }
 
-    function createPost()
+    public function update(StorePostRequest $request, Post $post)
     {
-        return view('create');
+
+        //dd($post);
+        //$updatedPost = Post::find($post);
+        $data = request()->post();
+
+
+
+        $post->title = $data['title'];
+        $post->description = $data['des'];
+        $post->user_id = $data['creator'];
+
+        $post->save();
+        return to_route('posts.index'); //redirect to index function
     }
 
-    function insertPost(Request $request)
+    public function delete($id)
     {
-        Posts::create($request->all());
-        return redirect()->route('home');
-    }
 
+        $user = Post::find($id);
+        $user->delete();
+        return to_route('posts.index'); //redirect to index function
+    }
 }

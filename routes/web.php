@@ -1,8 +1,13 @@
 <?php
 
+use App\Http\Controllers\Auth\SocialiteController;
+use App\Http\Controllers\CommentController;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\postController;
-use App\Http\Controllers\userController;
+use App\Http\Controllers\PostController;
+use App\Models\User;
+use Illuminate\Support\Facades\Auth;
+use Laravel\Socialite\Facades\Socialite;
+
 
 /*
 |--------------------------------------------------------------------------
@@ -10,34 +15,41 @@ use App\Http\Controllers\userController;
 |--------------------------------------------------------------------------
 |
 | Here is where you can register web routes for your application. These
-| routes are loaded by the RouteServiceProvider and all of them will
-| be assigned to the "web" middleware group. Make something great!
+| routes are loaded by the RouteServiceProvider within a group which
+| contains the "web" middleware group. Now create something great!
 |
 */
-Route::get('/',[postController::class,'getPosts'])->name('home');
 
+Route::get('/', function () {
+    return view('welcome');
+});
 
-Route::get('/view/{id}',[postController::class,'viewPost'])->name('view.page');
+Route::get('/posts', [PostController::class, 'index'])->name('posts.index')->middleware('auth');
 
-Route::get('/update/{id}',[postController::class,'updatePost'])->name('update.page');
-Route::put('/edit/{id}',[postController::class,'editPost'])->name('edit.page');
+Route::get('/posts/create', [PostController::class, 'create'])->name('posts.create')->middleware('auth');
 
-Route::delete('/delete/{id}',[postController::class,'deletePost'])->name('delete.page');
+Route::post('/posts', [PostController::class, 'store'])->name('posts.store');
 
-Route::get('/create',[postController::class,'createPost'])->name('create.page');
-Route::post('/insert',[postController::class,'insertPost'])->name('insert.page');
+Route::post('/posts/{post}/store', [CommentController::class, 'store'])->name('comments.create');
 
-Route::get('/user',[userController::class,'index'])->name('user.index');
-Route::get('/user/{id}',[userController::class,'viewUser'])->name('user.page');
+Route::get('/posts/{post}', [PostController::class, 'show'])->name('posts.show')->middleware('auth');
 
+Route::get('/posts/{post}/edit', [PostController::class, 'edit'])->name('posts.edit')->middleware('auth');
 
-// Route::post('/create')
+Route::get('/comments/{post}/{comment}/edit', [CommentController::class, 'edit'])->name('comments.edit')->middleware('auth');
 
-// Route::get('/view',function()
-// {
-//     return view('view');
-// })->name('view.page');
+Route::delete('/posts/{post}', [PostController::class, 'delete'])->name('posts.delete');
 
-// Route::get('/', function () {
-//     return view('welcome');
-// });
+Route::delete('/comments/{post}/{comment}', [CommentController::class, 'delete'])->name('comments.delete');
+
+Route::put('/posts/{post}', [PostController::class, 'update'])->name('posts.update');
+
+Route::put('/comments/{post}/{comment}', [CommentController::class, 'update'])->name('comment.update');
+
+Auth::routes();
+
+Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name('home');
+
+Route::get('/auth/redirect/{provider}', [SocialiteController::class, 'redirect']);
+
+Route::get('/auth/callback/{provider}', [SocialiteController::class, 'callback']);
